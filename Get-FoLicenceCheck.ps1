@@ -60,6 +60,7 @@ $foUsers = $null
 $foRoleTier = $null
 $foStatus = ''
 $signInAvailable = $true
+$tenantDomains = @()
 
 if ($Demo) {
     Write-Host 'Demo mode: using made-up data. Nothing is read from Entra or F&O.' -ForegroundColor Yellow
@@ -72,6 +73,7 @@ if ($Demo) {
     $settings.Currency = $demoData.Currency
     $foStatus = 'F&O users and roles compared with the demo environment.'
     $tenantLabel = 'Demo tenant (made-up data and prices)'
+    $tenantDomains = @('contoso.com')
 }
 else {
     foreach ($module in 'Microsoft.Graph.Authentication', 'Microsoft.Graph.Users', 'Microsoft.Graph.Identity.DirectoryManagement') {
@@ -79,11 +81,20 @@ else {
             throw "The $module module is missing. Install it with: Install-Module $module -Scope CurrentUser"
         }
     }
-    Write-Host 'Signing in to Microsoft Graph (read only)...'
-    $graphArgs = @{ Scopes = 'User.Read.All', 'AuditLog.Read.All', 'Organization.Read.All'; NoWelcome = $true }
-    if ($TenantId) { $graphArgs.TenantId = $TenantId }
-    Connect-MgGraph @graphArgs | Out-Null
+    $scopes = 'User.Read.All', 'AuditLog.Read.All', 'Organization.Read.All'
+    $context = Get-MgContext
+    $reuse = $context -and -not ($scopes | Where-Object { $_ -notin $context.Scopes }) -and (-not $TenantId -or $context.TenantId -eq $TenantId)
+    if ($reuse) {
+        Write-Host 'Using the existing Microsoft Graph sign-in.'
+    }
+    else {
+        Write-Host 'Signing in to Microsoft Graph (read only)...'
+        $graphArgs = @{ Scopes = $scopes; NoWelcome = $true }
+        if ($TenantId) { $graphArgs.TenantId = $TenantId }
+        Connect-MgGraph @graphArgs | Out-Null
+    }
     $tenantLabel = "Tenant $((Get-MgContext).TenantId)"
+    $tenantDomains = @(Get-TenantDomain)
 
     Write-Host 'Reading Dynamics 365 licences...'
     $skus = @(Get-DynamicsSku -SkuMap $settings.Skus)
@@ -101,10 +112,19 @@ else {
         }
         $base = ConvertTo-FoEnvironmentUrl $FoEnvironmentUrl
         try {
-            Write-Host "Signing in to F&O ($base)..."
-            $azArgs = @{ WarningAction = 'SilentlyContinue' }
-            if ($TenantId) { $azArgs.Tenant = $TenantId }
-            Connect-AzAccount @azArgs | Out-Null
+            $azContext = Get-AzContext -ErrorAction SilentlyContinue
+            if ($azContext -and (-not $TenantId -or $azContext.Tenant.Id -eq $TenantId)) {
+                Write-Host 'Using the existing sign-in for F&O.'
+            }
+            else {
+                Write-Host "Signing in to F&O ($base)..."
+                Update-AzConfig -LoginExperienceV2 Off -Scope Process -WarningAction SilentlyContinue | Out-Null
+                # The macOS sign-in broker only works from an app's main thread, so use the browser instead.
+                if (-not $IsWindows) { Update-AzConfig -EnableLoginByWam $false -Scope Process -WarningAction SilentlyContinue | Out-Null }
+                $azArgs = @{ WarningAction = 'SilentlyContinue' }
+                if ($TenantId) { $azArgs.Tenant = $TenantId }
+                Connect-AzAccount @azArgs | Out-Null
+            }
             $token = Get-FoAccessToken -EnvironmentUrl $base
             Write-Host 'Reading F&O users...'
             $foUsers = @(Get-FoSystemUser -EnvironmentUrl $base -AccessToken $token)
@@ -126,8 +146,15 @@ else {
     }
 }
 
+if ($null -ne $foUsers -and $tenantDomains.Count) {
+    $otherDomain = Get-OtherDomainFoUserCount -FoUser $foUsers -TenantDomain $tenantDomains
+    if ($otherDomain -gt 0) {
+        $foStatus += " $otherDomain enabled F&O users from other domains (demo data, service accounts, other tenants) were not checked, because they can't hold a licence in this tenant."
+    }
+}
 $rows = @(ConvertTo-LicenceUserRow -User $users -Sku $skus -Now $now -InactiveDays $settings.InactiveDays `
-    -SignInAvailable $signInAvailable -ExcludeUsers $settings.ExcludeUsers -FoUser $foUsers -FoRoleTier $foRoleTier)
+    -SignInAvailable $signInAvailable -ExcludeUsers $settings.ExcludeUsers -FoUser $foUsers -FoRoleTier $foRoleTier `
+    -TenantDomain $tenantDomains)
 $summary = @(Get-LicenceSummary -Row $rows -Sku $skus -Prices $settings.Prices)
 $findings = @(Get-FindingCount -Row $rows)
 

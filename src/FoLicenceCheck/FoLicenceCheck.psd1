@@ -71,7 +71,7 @@ PowerShellVersion = '7.0'
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = 'ConvertTo-FoEnvironmentUrl', 'Get-DefaultSkuMap', 
                'Read-LicenceSetting', 'Get-LastSignIn', 'Get-TierFromLicenceType', 
-               'Get-DynamicsSku', 'Get-LicensedUser', 'Get-FoAccessToken', 
+               'Get-DynamicsSku', 'Get-LicensedUser', 'Get-TenantDomain', 'Get-OtherDomainFoUserCount', 'Get-FoAccessToken', 
                'Invoke-FoODataQuery', 'Get-FoSystemUser', 'Get-FoRoleLicence', 
                'ConvertTo-FoRoleLicence', 'ConvertTo-LicenceUserRow', 
                'Get-LicenceSummary', 'Get-FindingCount', 'ConvertTo-LicenceCsvRow', 

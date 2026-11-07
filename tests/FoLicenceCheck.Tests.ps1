@@ -8,6 +8,7 @@ BeforeAll {
         'Get-MgSubscribedSku' = { param([switch] $All) }
         'Get-MgUser'          = { param([switch] $All, [string] $Filter, [string[]] $Property) }
         'Get-AzAccessToken'   = { param([string] $ResourceUrl) }
+        'Get-MgOrganization'  = { param([string[]] $Property) }
     }
     foreach ($name in $stubs.Keys) {
         if (-not (Get-Command $name -ErrorAction SilentlyContinue)) {
@@ -157,7 +158,14 @@ Describe 'ConvertTo-LicenceUserRow' {
             $cara.Findings | Should -Contain 'Disabled in F&O but licensed'
         }
         It 'flags licensed users who are not in F&O' {
-            ($rows | Where-Object UserPrincipalName -eq 'dan@contoso.com').Findings | Should -Contain 'Licensed but not a user in F&O'
+            ($rows | Where-Object UserPrincipalName -eq 'dan@contoso.com').Findings | Should -Contain 'Licensed but not a user in the checked F&O environment'
+        }
+        It 'skips F&O users outside the tenant domains' {
+            $foUsers2 = @($foUsers) + [pscustomobject]@{ UserId = 'demo1'; Name = 'Demo'; Alias = 'ellen@contosoax7.onmicrosoft.com'; Email = ''; Enabled = $true }
+            $rows2 = @(ConvertTo-LicenceUserRow -User $users -Sku @($fin, $tm) -Now $now -InactiveDays 90 -FoUser $foUsers2 -FoRoleTier $tiers -TenantDomain 'contoso.com')
+            $rows2.UserPrincipalName | Should -Not -Contain 'ellen@contosoax7.onmicrosoft.com'
+            $rows2.UserPrincipalName | Should -Contain 'eve@contoso.com'
+            Get-OtherDomainFoUserCount -FoUser $foUsers2 -TenantDomain 'contoso.com' | Should -Be 1
         }
         It 'lists F&O users with no Dynamics licence, but not built-in accounts' {
             ($rows | Where-Object UserPrincipalName -eq 'eve@contoso.com').Findings | Should -Contain 'Enabled in F&O but no Dynamics licence'
@@ -211,6 +219,15 @@ Describe 'Graph reads' {
         Mock -ModuleName FoLicenceCheck Get-MgUser { }
         Get-LicensedUser -Sku @($fin) | Out-Null
         Should -Invoke -ModuleName FoLicenceCheck Get-MgUser -ParameterFilter { $Filter -eq 'assignedLicenses/any(x:x/skuId eq f1)' }
+    }
+}
+
+Describe 'Get-TenantDomain' {
+    It 'returns the verified domains in lower case' {
+        Mock -ModuleName FoLicenceCheck Get-MgOrganization {
+            [pscustomobject]@{ VerifiedDomains = @([pscustomobject]@{ Name = 'Contoso.com' }, [pscustomobject]@{ Name = 'contoso.onmicrosoft.com' }) }
+        }
+        @(Get-TenantDomain) | Should -Be @('contoso.com', 'contoso.onmicrosoft.com')
     }
 }
 

@@ -1,4 +1,4 @@
-# F&O licence check
+# F&O license check
 
 A free, read-only PowerShell script that shows which Dynamics 365 Finance and
 Supply Chain Management (F&O) licences are paid for but not used, and what that
@@ -28,8 +28,8 @@ Per user (in a CSV, for the licence owner):
 | Never signed in | Waste, or an account set up and forgotten |
 | No sign-in for over 90 days (you choose the number) | Likely to be removed |
 | Disabled in Entra but licensed | Paying for someone who can't sign in |
-| Licensed but not a user in F&O, or disabled in F&O | Paying for someone who can't use F&O |
-| Enabled in F&O but no Dynamics licence | A compliance risk, the other way round |
+| Licensed but not a user in the checked F&O environment, or disabled there | Paying for someone who may not use F&O. Check production: a licence covers every environment. |
+| Enabled in F&O but no Dynamics licence | A compliance risk, the other way round. Only users in your tenant's own domains are checked, so demo data users and Microsoft service accounts don't show up. |
 | F&O roles need a higher licence than the user has | A compliance risk |
 | User has a higher licence than their F&O roles need | A possible saving |
 
@@ -46,8 +46,8 @@ F&O's own user licence reports and your licensing partner have the final word.
 No sign-in needed. With [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell):
 
 ```powershell
-git clone <repository-url>
-cd d365fo-licence-check
+git clone https://github.com/DynAax-AB/d365fo-license-check.git
+cd d365fo-license-check
 ./Get-FoLicenceCheck.ps1 -Demo
 ```
 

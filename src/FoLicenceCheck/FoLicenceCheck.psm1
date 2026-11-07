@@ -194,6 +194,38 @@ function Get-LicensedUser {
     [pscustomobject]@{ Users = @($users.Values); SignInAvailable = $signInAvailable }
 }
 
+function Get-TenantDomain {
+    <# The tenant's verified domains, lower case. Needs Organization.Read.All. #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param()
+    foreach ($org in @(Get-MgOrganization -Property 'verifiedDomains' -ErrorAction Stop)) {
+        foreach ($d in @(Get-Value $org 'VerifiedDomains')) {
+            $name = "$(Get-Value $d 'Name')".Trim().ToLowerInvariant()
+            if ($name) { $name }
+        }
+    }
+}
+
+function Get-OtherDomainFoUserCount {
+    <#
+    .SYNOPSIS
+        Counts enabled F&O users whose sign-in name is outside the tenant's
+        domains (demo data users, Microsoft service accounts, other tenants).
+        They can't hold a licence in this tenant, so they aren't flagged.
+    #>
+    [CmdletBinding()]
+    [OutputType([int])]
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][object[]] $FoUser,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]] $TenantDomain
+    )
+    @($FoUser | Where-Object {
+        $name = if ($_.Alias) { $_.Alias } else { $_.Email }
+        $_.Enabled -and $name -match '@' -and $name.Split('@')[-1].ToLowerInvariant() -notin $TenantDomain
+    }).Count
+}
+
 # --- Reading F&O -------------------------------------------------------------
 
 function Get-FoAccessToken {
@@ -318,7 +350,8 @@ function ConvertTo-LicenceUserRow {
         [bool] $SignInAvailable = $true,
         [string[]] $ExcludeUsers = @(),
         [object[]] $FoUser = $null,
-        [hashtable] $FoRoleTier = $null
+        [hashtable] $FoRoleTier = $null,
+        [string[]] $TenantDomain = @()
     )
     $skuById = @{}
     foreach ($s in $Sku) { $skuById["$($s.SkuId)".ToLowerInvariant()] = $s }
@@ -362,7 +395,7 @@ function ConvertTo-LicenceUserRow {
             elseif ($daysSince -gt $InactiveDays) { $findings.Add("No sign-in for over $InactiveDays days"); $inactive = $true }
         }
         if ($foChecked) {
-            if (-not $fo) { $findings.Add('Licensed but not a user in F&O'); $inactive = $true }
+            if (-not $fo) { $findings.Add('Licensed but not a user in the checked F&O environment'); $inactive = $true }
             elseif (-not $fo.Enabled) { $findings.Add('Disabled in F&O but licensed'); $inactive = $true }
         }
         if ($roleTier -and $enabled -and $fo -and $fo.Enabled) {
@@ -394,6 +427,8 @@ function ConvertTo-LicenceUserRow {
             if ($matchedFo.ContainsKey($f.UserId) -or -not $f.Enabled) { continue }
             $key = if ($f.Alias) { $f.Alias } else { $f.Email }
             if (-not $key -or $key -notmatch '@') { continue } # built-in and service users have no sign-in name
+            # Users outside the tenant's own domains can't hold a licence here.
+            if ($TenantDomain.Count -and $key.Split('@')[-1] -notin $TenantDomain) { continue }
             $excluded = $exclude.ContainsKey($key)
             [pscustomobject]@{
                 UserPrincipalName = $key
@@ -637,7 +672,7 @@ function New-DemoData {
 
 Export-ModuleMember -Function @(
     'ConvertTo-FoEnvironmentUrl', 'Get-DefaultSkuMap', 'Read-LicenceSetting', 'Get-LastSignIn', 'Get-TierFromLicenceType',
-    'Get-DynamicsSku', 'Get-LicensedUser', 'Get-FoAccessToken', 'Invoke-FoODataQuery', 'Get-FoSystemUser',
+    'Get-DynamicsSku', 'Get-LicensedUser', 'Get-TenantDomain', 'Get-OtherDomainFoUserCount', 'Get-FoAccessToken', 'Invoke-FoODataQuery', 'Get-FoSystemUser',
     'Get-FoRoleLicence', 'ConvertTo-FoRoleLicence', 'ConvertTo-LicenceUserRow', 'Get-LicenceSummary',
     'Get-FindingCount', 'ConvertTo-LicenceCsvRow', 'New-LicenceReportHtml', 'New-DemoData'
 )
