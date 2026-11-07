@@ -1,0 +1,12 @@
+name: Idea or improvement
+description: Something the report should show or do differently.
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: What you'd like the report to show, and the problem it would solve for you.
+    validations:
+      required: true

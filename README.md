@@ -1,5 +1,10 @@
 # F&O license check
 
+[![Tests](https://github.com/DynAax-AB/dynaax-d365fo-license-check/actions/workflows/test.yml/badge.svg)](https://github.com/DynAax-AB/dynaax-d365fo-license-check/actions/workflows/test.yml)
+[![PowerShell 7+](https://img.shields.io/badge/PowerShell-7%2B-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+[![Read only](https://img.shields.io/badge/access-read%20only-2ea44f)](#safe-to-run)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A free, read-only PowerShell script that shows which Dynamics 365 Finance and
 Supply Chain Management (F&O) licences are paid for but not used, and what that
 costs per month.
@@ -18,6 +23,48 @@ never sign in. Nobody checks, because the facts sit in two places:
   actually need.
 
 This script reads both and puts them side by side.
+
+## How it works
+
+```mermaid
+flowchart LR
+    subgraph cloud["☁️ Your Microsoft cloud"]
+        direction TB
+        entra["👥 <b>Entra ID</b><br/>Dynamics licences,<br/>who holds them,<br/>last sign-in"]
+        fo["🏭 <b>F&O environment</b><br/>users, and the licence<br/>their security roles need"]
+    end
+    settings["🛠️ <b>settings.json</b><br/>your prices, inactive days,<br/>accounts to leave out"]
+    subgraph pc["💻 Your machine"]
+        direction LR
+        script["⚙️ <b>Get-FoLicenceCheck.ps1</b><br/>puts both sides together"]
+        html["📊 <b>One-page summary</b><br/>counts and cost, no names<br/>share with the business"]
+        csv["🔒 <b>Per-user CSV</b><br/>names and findings<br/>keep it private"]
+    end
+
+    entra -- "Microsoft Graph · read only" --> script
+    fo -. "optional · OData · read only" .-> script
+    settings --> script
+    script --> html
+    script --> csv
+
+    classDef source fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef fo fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef tool fill:#ccfbf1,stroke:#0d9488,stroke-width:2px,color:#0f172a
+    classDef config fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef output fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef private fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#0f172a
+    class entra source
+    class fo fo
+    class script tool
+    class settings config
+    class html output
+    class csv private
+    style cloud fill:#3b82f614,stroke:#60a5fa,color:#3b82f6
+    style pc fill:#22c55e14,stroke:#4ade80,color:#16a34a
+```
+
+The script only reads. Prices and exclusions come from your own settings file, and
+both outputs stay on your machine.
 
 ## What it reports
 

@@ -1,0 +1,49 @@
+name: Bug report
+description: The script stopped with an error or gave a wrong result.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this.
+        **Please don't paste tenant data**: no tenant IDs, app IDs, user names, email addresses or environment URLs. Replace them with made-up values.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      description: With real names replaced.
+      render: powershell
+      placeholder: ./Get-FoLicenceCheck.ps1 -TenantId contoso.onmicrosoft.com ...
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message
+      render: text
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+  - type: input
+    id: pwsh
+    attributes:
+      label: PowerShell version
+      description: Run $PSVersionTable.PSVersion
+      placeholder: "7.4.6"
+  - type: checkboxes
+    id: demo
+    attributes:
+      label: Checks
+      options:
+        - label: "./Get-FoLicenceCheck.ps1 -Demo works on my machine"
