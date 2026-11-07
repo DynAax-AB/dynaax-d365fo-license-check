@@ -1,0 +1,4 @@
+output/
+settings.json
+.DS_Store
+*.csv

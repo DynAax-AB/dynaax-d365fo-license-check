@@ -1,0 +1,16 @@
+{
+  "inactiveDays": 90,
+  "currency": "EUR",
+  "pricesPerMonth": {
+    "DYN365_FINANCE": null,
+    "DYN365_FINANCE_ATTACH": null,
+    "DYN365_SCM": null,
+    "DYN365_SCM_ATTACH": null,
+    "Dyn365_Operations_Activity": null,
+    "DYN365_TEAM_MEMBERS": null
+  },
+  "excludeUsers": [
+    "svc-integration@contoso.com"
+  ],
+  "extraSkus": {}
+}
