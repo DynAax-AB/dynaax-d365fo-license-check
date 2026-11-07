@@ -46,8 +46,8 @@ F&O's own user licence reports and your licensing partner have the final word.
 No sign-in needed. With [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell):
 
 ```powershell
-git clone https://github.com/DynAax-AB/d365fo-license-check.git
-cd d365fo-license-check
+git clone https://github.com/DynAax-AB/dynaax-d365fo-license-check.git
+cd dynaax-d365fo-license-check
 ./Get-FoLicenceCheck.ps1 -Demo
 ```
 
